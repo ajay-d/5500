@@ -10,46 +10,13 @@ library(ggplot2)
 options(stringsAsFactors = FALSE,
         scipen = 10) 
 
-f.2014 <- read_csv("data/f_5500_2014_latest.csv")
-f.2014.sb <- read_csv("data/F_SCH_SB_2014_latest.csv")
-
-problems(f.2014.sb) %>% count(col)
-
-names(f.2014.sb)
-
-l1 <- f.2014.sb %>% map_chr(class)
-l2 <- f.2014.sb %>% map(class)
-l <- lapply(f.2014.sb, class)
-
-identical(l, l2)
-
-as.data.frame(l1)
-
-str(l)
-str(l1)
-
-c <- unlist(l)
-c <- flatten(l)
-c <- flatten_chr(l)
-
-l <- lapply(f.2014.sb, class)
-l <- as.data.frame(l) %>%
-  gather(var, type)
-
-l %>% count(type)
-
-l <- l %>%
-  mutate(type.read = c('character'='c', 'Date'='D', 'integer'='d', 'numeric'='d')[type])
-
-paste0(as.character(l$type.read), collapse = '')
-
-f.2014.sb <- read_csv("data/F_SCH_SB_2014_latest.csv",
-                      col_types = paste0(as.character(l$type.read), collapse = ''))
-
-f.2014.c <- read_csv("data/F_SCH_C_PART1_ITEM2_2014_latest.csv")
-f.2014.codes <- read_csv("data/F_SCH_C_PART1_ITEM2_CODES_2014_latest.csv")
-
-f.2014.c %>% filter(row_number()==26449)
+f.2014 <- read_csv("data/f_5500_2014_latest.csv.bz2",
+                   col_types = "cDDdcdddddddddcccDccccccccccccccccccccccccccddccccccccccccccdcccTcTcTcddddddddddccddddddddddddddddddcDcccdddccccccccccccccdcdddd")
+f.2014.sb <- read_csv("data/F_SCH_SB_2014_latest.csv.bz2",
+                      col_types = "cDDccddDddddddcddddddddddDcccccccccccccdcddddddddddddddddddddddddddddddddddddddddddddcddddddddDdddddddcdddcddddddddddddd")
+f.2014.c <- read_csv("data/F_SCH_C_PART1_ITEM2_2014_latest.csv.bz2",
+                     col_types = "cdcccccccccccccccddddd")
+f.2014.codes <- read_csv("data/F_SCH_C_PART1_ITEM2_CODES_2014_latest.csv.bz2")
 
 f.2014 %>%
   count(ACK_ID) %>%
@@ -92,79 +59,57 @@ f.2014.combined <- f.2014.filtered %>%
 f.2014.combined %>%
   filter(TOT_PARTCP_BOY_CNT != SB_TOT_PARTCP_CNT)
 
+codes <- f.2014$TYPE_WELFARE_BNFT_CODE[1:200]
+#codes <- str_replace_na(codes)
+codes.l <- str_extract_all(codes, '[A-Z0-9]{2}')
+codes.len <- codes.l %>% map(length) %>% flatten_int()
+codes.l <- codes.l %>% map(paste0, collapse='.') %>% flatten_chr()
+max(codes.len)
+quantile(codes.len, probs=c(.75,.9,.95,.99))
+sum(codes.len %>% map_lgl(~.>5))
+sum(codes.len %>% map_lgl(~.>10))
+sum(codes.len %>% map_lgl(~.>6))
 
-f.2014.combined %>% filter(SPONS_DFE_EIN==362167060)
+codes.l <- str_extract_all(codes, '[A-Z0-9]{2}')
 
-f.2014.filtered %>% filter(str_detect(SPONSOR_DFE_NAME, "GILA RIVER"))
-t1 <- f.2014.filtered %>% filter(str_detect(SPONSOR_DFE_NAME, "GILA RIVER"))
+codes[43]
+codes[58]
+codes[75]
 
-a1 <- f.2014.c %>% filter(ACK_ID=='20150928141914P030016240333001')
-a2 <- f.2014.codes %>% filter(ACK_ID=='20150928141914P030016240333001')
+codes.l[43]
+codes.l[58]
+codes.l[75]
 
-a1 <- f.2014.c %>% filter(ACK_ID=='20150731101952P040122479287001')
-a2 <- f.2014.codes %>% filter(ACK_ID=='20150731101952P040122479287001')
-a <- f.2014 %>% filter(ACK_ID=='20150731101952P040122479287001')
+codes.3[43]
+codes.3[58]
+codes.3[75]
 
-f.2014.c %>% count(PROVIDER_OTHER_RELATION, sort=TRUE)
+codes.3 <- str_extract_all(codes, '[A-Z0-9]{2}') %>% map_if(~length(.)>=4, 4)
+codes.3 <- str_extract_all(codes, '[A-Z0-9]{2}') %>% map_int(length)
+log.vec <- str_extract_all(codes, '[A-Z0-9]{2}') %>% map_lgl(~length(.)>=4)
 
-f.2014.combined <- f.2014.combined %>%
-  inner_join(f.2014.c %>%
-               group_by(ACK_ID) %>%
-               summarise(PROVIDER_OTHER_DIRECT_COMP_AMT = sum(PROVIDER_OTHER_DIRECT_COMP_AMT),
-                         N_PROVIDERS = n()),
-             by='ACK_ID')
+str_extract_all(codes[log.vec], '[A-Z0-9]{2}') %>% map_if(~length(.)>=4, 4)
+str_extract_all(codes[log.vec], '[A-Z0-9]{2}') %>% map_chr(4)
+ind <- which(log.vec, arr.ind=TRUE)
+codes[ind]
+codes.3 <- rep(NA, length(codes.l))
+codes.3[log.vec] <- str_extract_all(codes[log.vec], '[A-Z0-9]{2}') %>% map_chr(4)
 
-f.2014.combined %>%
-  filter(PROVIDER_OTHER_DIRECT_COMP_AMT == max(PROVIDER_OTHER_DIRECT_COMP_AMT, na.rm=TRUE))
 
-summary(f.2014.combined$PROVIDER_OTHER_DIRECT_COMP_AMT)
-summary(f.2014.combined$SB_TOT_PARTCP_CNT)
-summary(f.2014.combined$N_PROVIDERS)
+codes.3 <- str_extract_all(codes, '[A-Z0-9]{2}') %>% map_if(~length(.)>=4, 4)
 
-ggplot(f.2014.combined %>% filter(PROVIDER_OTHER_DIRECT_COMP_AMT<1e6)) + geom_histogram(aes(PROVIDER_OTHER_DIRECT_COMP_AMT))
-ggplot(f.2014.combined %>% filter(SB_TOT_PARTCP_CNT<30000)) + geom_histogram(aes(SB_TOT_PARTCP_CNT))
-ggplot(f.2014.combined) + geom_histogram(aes(N_PROVIDERS))
-
-ggplot(f.2014.combined) +
-  geom_point(aes(x=SB_TOT_PARTCP_CNT, y=PROVIDER_OTHER_DIRECT_COMP_AMT)) +
-  scale_x_log10() +
-  scale_y_log10() + 
-  xlab('Total Participant Count') +
-  ylab('Total Provider Comp')
-
-ggplot(f.2014.combined) +
-  geom_point(aes(x=TOT_ACT_RTD_SEP_BENEF_CNT, y=PROVIDER_OTHER_DIRECT_COMP_AMT)) +
-  scale_x_log10() +
-  scale_y_log10() + 
-  xlab('Total Active Participant Count') +
-  ylab('Total Provider Comp')
-
-ggplot(f.2014.combined) +
-  geom_point(aes(x=CURR_VALUE, y=PROVIDER_OTHER_DIRECT_COMP_AMT)) +
-  scale_x_log10() +
-  scale_y_log10() + 
-  xlab('Total Market Value') +
-  ylab('Total Provider Comp')
-
-ggplot(f.2014.combined) +
-  geom_point(aes(x=CURR_VALUE, y=ACTRL_VALUE)) +
-  scale_x_log10() +
-  scale_y_log10() + 
-  xlab('Total Market Value') +
-  ylab('Total Actuarial Value')
-
-ggplot(f.2014.combined) +
-  geom_point(aes(x=N_PROVIDERS, y=PROVIDER_OTHER_DIRECT_COMP_AMT)) +
-  scale_x_log10() +
-  scale_y_log10() + 
-  xlab('N Providers') +
-  ylab('Total Provider Comp')
-
-ggplot(f.2014.combined) +
-  geom_point(aes(x=CURR_VALUE, y=PROVIDER_OTHER_DIRECT_COMP_AMT/N_PROVIDERS)) +
-  scale_x_log10() +
-  scale_y_log10() + 
-  xlab('N Providers') +
-  ylab('Total Provider Comp')
+codes.1 <- str_extract(codes, '[A-Z0-9]{2}')
+#codes.2 <- str_extract_all(codes, '[A-Z0-9]{2}') %>% map_if(~length(.)>=2, 2) %>% flatten_chr()
+for (i in 2:7) {
+  
+  var.name <- paste0('codes.', i)
+  tmp <- rep(NA, length(codes.1))
+  #assign(var.name, rep(NA, length(codes.1)))
+  
+  log.vec <- str_extract_all(codes, '[A-Z0-9]{2}') %>% map_lgl(~length(.)>=i)
+  elements <- str_extract_all(codes[log.vec], '[A-Z0-9]{2}') %>% map_chr(i)
+  tmp[log.vec] <- elements
+  assign(var.name, tmp)
+}
 
 
